@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hades II — Achievement Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f9f8f6;
+    --surface: #ffffff;
+    --surface2: #f1efe8;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --text: #1a1a1a;
+    --text2: #555550;
+    --text3: #888780;
+    --purple50: #EEEDFE;
+    --purple200: #AFA9EC;
+    --purple600: #534AB7;
+    --purple800: #3C3489;
+    --purple900: #26215C;
+    --green50: #EAF3DE;
+    --green600: #3B6D11;
+    --green800: #27500A;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a18;
+      --surface: #242422;
+      --surface2: #2c2c2a;
+      --border: rgba(255,255,255,0.10);
+      --border2: rgba(255,255,255,0.20);
+      --text: #f0ede8;
+      --text2: #b4b2a9;
+      --text3: #888780;
+      --purple50: #26215C;
+      --purple200: #7F77DD;
+      --purple600: #7F77DD;
+      --purple800: #AFA9EC;
+      --purple900: #CECBF6;
+      --green50: #173404;
+      --green600: #97C459;
+      --green800: #C0DD97;
+    }
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .page { max-width: 820px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  .top { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 2rem; }
+  h1 { font-size: 22px; font-weight: 600; color: var(--text); }
+  h1 span { color: var(--purple600); }
+  .subtitle { font-size: 13px; color: var(--text3); margin-top: 4px; }
+  .stats { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .progress-bar-bg { width: 180px; height: 10px; background: var(--surface2); border-radius: 5px; border: 0.5px solid var(--border); overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: var(--purple600); border-radius: 5px; transition: width 0.3s ease; }
+  .progress-label { font-size: 14px; font-weight: 600; color: var(--purple600); min-width: 50px; }
+  .pct-label { font-size: 12px; color: var(--text3); }
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .btn { font-size: 13px; color: var(--text2); background: var(--surface); border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 6px 12px; cursor: pointer; transition: all 0.15s; }
+  .btn:hover { background: var(--surface2); color: var(--text); }
+  .btn.danger:hover { color: #c0392b; border-color: #c0392b; }
+  .section { margin-bottom: 12px; }
+  .sec-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius); border: 0.5px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
+  .sec-head:hover { background: var(--border); }
+  .sec-icon { font-size: 18px; }
+  .sec-title { font-size: 14px; font-weight: 600; color: var(--text); flex: 1; }
+  .sec-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; background: var(--purple50); color: var(--purple800); }
+  .sec-badge.complete { background: var(--green50); color: var(--green800); }
+  .sec-chev { font-size: 16px; color: var(--text3); transition: transform 0.2s; }
+  .sec-chev.open { transform: rotate(180deg); }
+  .ach-list { display: flex; flex-direction: column; gap: 4px; padding: 4px 0 0; }
+  .ach { border: 0.5px solid var(--border); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+  .ach-main { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; cursor: pointer; transition: background 0.15s; }
+  .ach-main:hover { background: var(--surface2); }
+  .ach.done { border-color: var(--purple200); }
+  .ach.done .ach-main { background: var(--purple50); }
+  .ach.done .ach-main:hover { filter: brightness(0.97); }
+  .checkbox { width: 20px; height: 20px; border-radius: 5px; border: 1.5px solid var(--border2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: all 0.15s; background: var(--surface); }
+  .ach.done .checkbox { background: var(--purple600); border-color: var(--purple600); }
+  .check-svg { width: 12px; height: 12px; stroke: white; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; display: none; }
+  .ach.done .check-svg { display: block; }
+  .ach-info { flex: 1; min-width: 0; }
+  .ach-name { font-size: 14px; font-weight: 600; color: var(--text); }
+  .ach.done .ach-name { color: var(--purple800); }
+  .ach-short { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .ach.done .ach-short { color: var(--purple600); }
+  .expand-btn { font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 0.5px solid var(--border); background: none; color: var(--text3); cursor: pointer; flex-shrink: 0; margin-top: 2px; transition: all 0.15s; white-space: nowrap; }
+  .expand-btn:hover { background: var(--surface2); color: var(--text2); }
+  .ach-guide { display: none; padding: 0 14px 14px 46px; font-size: 13px; color: var(--text2); line-height: 1.7; border-top: 0.5px solid var(--border); padding-top: 12px; }
+  .ach-guide.visible { display: block; }
+  .ach-guide h4 { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin: 10px 0 4px; }
+  .ach-guide h4:first-child { margin-top: 0; }
+  .ach-guide ul { padding-left: 16px; }
+  .ach-guide ul li { margin-bottom: 4px; }
+  .ach-guide .tip { display: inline-block; font-size: 11px; font-weight: 600; background: var(--purple50); color: var(--purple800); padding: 1px 6px; border-radius: 4px; margin-right: 4px; }
+  .ach-guide .warn { display: inline-block; font-size: 11px; font-weight: 600; background: #faeeda; color: #633806; padding: 1px 6px; border-radius: 4px; margin-right: 4px; }
+  .ach-guide .spoiler { display: inline-block; font-size: 11px; font-weight: 600; background: #fcebeb; color: #791f1f; padding: 1px 6px; border-radius: 4px; margin-right: 4px; }
+  @media (prefers-color-scheme: dark) {
+    .ach-guide .warn { background: #412402; color: #FAC775; }
+    .ach-guide .spoiler { background: #501313; color: #F7C1C1; }
+  }
+  .filter-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .filter-btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 0.5px solid var(--border2); background: none; color: var(--text2); cursor: pointer; transition: all 0.15s; }
+  .filter-btn:hover { background: var(--surface2); }
+  .filter-btn.active { background: var(--purple600); color: white; border-color: var(--purple600); }
+  .empty-msg { text-align: center; padding: 2rem; color: var(--text3); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div>
+      <h1>Hades II — <span>Achievement Tracker</span></h1>
+      <div class="subtitle">Click an achievement to mark it. Click "Details" for the full guide.</div>
+    </div>
+    <div class="stats">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="bar"></div></div>
+      <div>
+        <div class="progress-label" id="plabel">0 / 49</div>
+        <div class="pct-label" id="ppct">0%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="filter-row">
+    <button class="filter-btn active" onclick="setFilter('all')">All</button>
+    <button class="filter-btn" onclick="setFilter('done')">Completed</button>
+    <button class="filter-btn" onclick="setFilter('todo')">Remaining</button>
+  </div>
+
+  <div class="controls">
+    <button class="btn" onclick="expandAll()">Expand All</button>
+    <button class="btn" onclick="collapseAll()">Collapse All</button>
+    <button class="btn" onclick="expandGuides()">All Guides</button>
+    <button class="btn" onclick="collapseGuides()">Hide Guides</button>
+    <button class="btn danger" onclick="resetAll()">Reset All</button>
+  </div>
+
+  <div id="sections"></div>
+</div>
+
+<script>
+const DATA = [
+  { id:"regions", icon:"🗺️", title:"Clearing Regions", items:[
+    { id:"r1", name:"Witch of the Woods", short:"Clear Erebus — defeat Hecate",
+      guide:`<h4>How to unlock</h4>Erebus is the first Region of the Underworld and the very first area you'll play through. Defeat its Guardian Hecate to earn this achievement. You'll fight her at the end of the Erebus run.<h4>Note</h4>You need to defeat Hecate to also unlock access to the Surface (after receiving the prophecy "Permeation of Witching-Wards" from Hermes).` },
+    { id:"r2", name:"Witch of the Depths", short:"Clear Oceanus — defeat Scylla and the Sirens",
+      guide:`<h4>How to unlock</h4>Oceanus is the second Region of the Underworld. Defeat its Guardian Scylla (and the Sirens) at the end of the Oceanus run.` },
+    { id:"r3", name:"Witch of the Plains", short:"Clear the Fields of Mourning — defeat Cerberus",
+      guide:`<h4>How to unlock</h4>The Fields of Mourning is the third Region of the Underworld. Defeat its Guardian Cerberus at the end of the run.` },
+    { id:"r4", name:"Witch of the Abyss", short:"Clear Tartarus — defeat Chronos",
+      guide:`<h4>How to unlock</h4>Tartarus is the last Region of the Underworld. Defeat the final Guardian Chronos to earn this achievement and complete the Underworld.` },
+    { id:"r5", name:"Witch of the Outskirts", short:"Clear the City of Ephyra — defeat Polyphemus",
+      guide:`<h4>How to unlock the Surface</h4>You must first meet Hermes and defeat Hecate until you receive the prophecy "Permeation of Witching-Wards".<h4>How to earn</h4>The City of Ephyra is the first Region of the Surface. Defeat its Guardian Polyphemus.` },
+    { id:"r6", name:"Witch of the Waters", short:"Clear the Rift of Thessaly — defeat Eris",
+      guide:`<h4>How to earn</h4>The Rift of Thessaly is the second Region of the Surface. Defeat its Guardian Eris at the end of the run.` },
+    { id:"r7", name:"Witch of the Mountains", short:"Clear Mount Olympus — defeat Prometheus",
+      guide:`<h4>How to earn</h4>Mount Olympus is the third Region of the Surface. Defeat its Guardian Prometheus.` },
+    { id:"r8", name:"Witch of the Clouds", short:"Clear the Summit — defeat Typhon",
+      guide:`<h4>How to earn</h4>The Summit is the last Region of the Surface. Defeat the final Guardian Typhon to complete the Surface.` },
+  ]},
+  { id:"prog", icon:"📜", title:"Progression", items:[
+    { id:"p1", name:"So Mote It Be", short:"Cast 50 Incantations at the Crossroads Cauldron",
+      guide:`<h4>How incantations work</h4>Once Hecate unlocks the Cauldron, you can perform Incantations provided by various characters as you progress the story. Casting them requires Reagents.<h4>How to get Reagents</h4><ul><li>Gathering resources in Underworld and Surface with Gathering Tools</li><li>Defeating the Guardians of each Region</li><li>Brewing reagents in the Cauldron</li><li>Purchasing from the Wretched Broker</li><li>Completing Chaos Trials</li></ul><h4>Note</h4>Just keep progressing normally — you'll naturally cast 50 Incantations as you unlock more content.` },
+    { id:"p2", name:"Hand of the Fates", short:"Fulfill 60 Minor Prophecies",
+      guide:`<h4>How to unlock</h4>Complete the incantation "Fated Intervention" to unlock the Fated List at the Crossroads. You can find all Minor Prophecies there.<h4>Note</h4>Just keep progressing naturally — the Minor Prophecies are tied to all kinds of small objectives you'll do anyway.` },
+    { id:"p3", name:"Giving Back", short:"Earn 10,000 Kudos",
+      guide:`<h4>How to unlock Kudos</h4>Cast the incantation "Earthly Fortune" first. After that, trade resources with the Wretched Broker to earn Kudos.<h4>Best ways to farm Kudos</h4><ul><li><b>Rubbish (from Eris):</b> Eris drops Rubbish at the Crossroads. You only need 3 for one incantation, everything else can be traded for Kudos (1 Kudos per Rubbish).</li><li><b>Gemstones:</b> Cast "Gathering of Subterranean Riches" to get Gemstones from Guardians defeated with Nocturnal Arms with Grave Thirst (5 Kudos each).</li><li><b>Psyche and Ashes:</b> Once all Arcana are unlocked and upgraded, trade spare Psyche and Ashes for Kudos (get Psyche via Frinos, Bones, or Obol Points).</li><li><b>Spare resources:</b> Trade any excess resources at the Wretched Broker.</li></ul>` },
+    { id:"p4", name:"Denizens of the Depths", short:"Fish 20 different types of fish",
+      guide:`<h4>Requirements</h4><ul><li><b>Rod of Fishing:</b> One of the Gathering Tools at the Silver Pool. Cast the incantation "Night's Craftwork" at the Cauldron to unlock it.</li><li><b>Talk to Poseidon:</b> Keep talking to him until he gives you the Prophecy "Denizens of the Depths". This can take a while as he may prioritize other story dialogue first. By the time he gives it, it may already be fulfilled.</li></ul><h4>Tips</h4>Different fish species appear in different Regions of both Underworld and Surface, so explore everywhere. Bring the Animal Familiar Toula — she increases chances of Fishing Points appearing and can automatically catch fish.` },
+  ]},
+  { id:"story", icon:"⚡", title:"Main Story & Epilogue", items:[
+    { id:"s1", name:"Death to Chronos", short:"Complete the main story of the game",
+      guide:`<h4>Steps to complete</h4><ul><li>Defeat Chronos a total of <b>6 times</b>. After each success, obtain 1 Zodiac Sand and talk to Zagreus until he agrees to give you Gigaros.</li><li>Defeat Typhon a total of <b>4 times</b>. After each success, obtain 1 Void Lens.</li><li>(These first two steps can be done simultaneously.)</li><li>Cast the Incantation <b>"Disintegration of Monstrosity"</b> (Requires: Gigaros, 4 Void Lens, 1 Zodiac Sand).</li><li>Defeat Typhon a 5th time to obtain Entropy.</li><li>Cast the Incantation <b>"Dissolution of Time"</b> (Requires: 5 Zodiac Sands, 1 Entropy).</li><li>Defeat Chronos one final time.</li></ul>` },
+    { id:"s2", name:"Golden Age", short:"Reach the Epilogue of the story",
+      guide:`<h4>Overview</h4>After completing the main story, you'll receive a message in the Fated List titled "Melinoë, Seek Us" from the Three Fates. Talk to specific characters to learn more about them (keep talking — it's RNG-dependent).<h4>Who the prophecy refers to</h4><ul><li><b>"He who is our Emissary":</b> Moros (at the Crossroads)</li><li><b>"They who created the world":</b> Chaos (in Chaos Gates)</li><li><b>"He who cast us out":</b> Chronos (between Erebus and Oceanus)</li><li><b>"She who trained you":</b> Hecate (at Crossroads / Guardian in Erebus)</li><li><b>"He who rebels against the gods":</b> Prometheus (Guardian of Mount Olympus)</li><li><b>"He who labors for the gods":</b> Heracles (randomly in City of Ephyra, Rift of Thessaly, or Mount Olympus)</li></ul><h4>Final step</h4>Once done, you'll receive "Melinoë, Find Us" with instructions. Activate Moros' Keepsake in Oceanus 3 times, then let yourself get killed.<h4>Trial of Doom (Easier method)</h4>Access through the Pitch-Black Stone — it sends you to Oceanus with the Engraved Pin. In the first 3 Chambers, kill most foes but leave at least one alive. Let yourself reach 0 HP — the Engraved Pin activates giving you 10 seconds. Kill remaining foes and move on. Repeat 3 times. On the 4th chamber, when the Pin activates, don't kill anyone and let the timer run out. The prophecy should be fulfilled.<br><br><span class="warn">Note</span> It's possible to trigger the achievement by dying on the 3rd chamber instead of the 4th.` },
+  ]},
+  { id:"arcana", icon:"🃏", title:"Arcana", items:[
+    { id:"a1", name:"Mind for Magick", short:"Gain 30 Grasp at the Altar of Ashes",
+      guide:`<h4>How</h4>Use Psyche at the Altar of Ashes to increase your Grasp. First unlock the Gathering Tool called the <b>Tablet of Peace</b> via the incantation "Night's Craftwork" at the Cauldron.<h4>How to get Psyche</h4>Lost Shades may appear in any encounter in Underworld or Surface. Complete the mini-game with the Tablet of Peace to collect Psyche. The Familiar Frinos can automatically collect Psyche and increases the chances of Lost Shades appearing.` },
+    { id:"a2", name:"Breadth of Knowledge", short:"Unlock all 25 Arcana Cards",
+      guide:`<h4>How</h4>Unlock all 25 Arcana Cards at the Altar of Ashes. More cards reveal as you unlock existing ones.<h4>Resources needed</h4><ul><li><b>Ashes (main resource):</b> Obtainable as run rewards, bought from the Wretched Broker with Bones, or requested via Obol Points.</li><li><b>Guardian Rewards:</b> Some cards require defeating specific Guardians (both Underworld and Surface).</li></ul>` },
+    { id:"a3", name:"Unassailable Insight", short:"Fully upgrade all Arcana Cards",
+      guide:`<h4>Requirements</h4>First complete the incantation "Consecration of Ashes" to enable upgrading.<h4>Resources needed to upgrade</h4><ul><li><b>Moon Dust:</b> Buy from Wretched Broker, request via Obol Points, or craft at the Cauldron.</li><li>Plus various other resources depending on the card.</li></ul>` },
+    { id:"a4", name:"Arcana of the Ages", short:"Defeat Chronos at least once with each Arcana Card equipped",
+      guide:`<h4>How</h4>Check the Prophecy in the Fated List to track which Arcana Cards you haven't won with yet. You need to defeat Chronos (final Guardian of Tartarus) with each card active.<h4>Hardest card: Judgement</h4>Judgement can only be active if you have no more than 3 other cards active.<h4>Easy workaround for Judgement</h4><ol><li>Equip Judgement and choose 3 essential cards (e.g. Persistence, Death, and one more).</li><li>Equip Circe's Keepsake, the Crystal Figurine.</li><li>After defeating the Erebus Guardian, Judgement activates 5 inactive Arcana Cards (at max level); the Figurine activates 2 more. You can change your Keepsake after this point.</li><li>Judgement keeps activating inactive cards after each subsequent Guardian — you can reach the final fight with practically a full loadout.</li></ol>` },
+    { id:"a5", name:"Natural Talent", short:"Defeat Hecate with no Arcana Cards equipped",
+      guide:`<h4>How to unlock</h4>This Prophecy unlocks after you've unlocked all Arcana Cards and trigger a dialogue about it with Hecate right before her fight.<h4>Easiest method: Trial of Humility</h4>Available via the Pitch-Black Stone. You'll play through Erebus with the Witch's Staff (Aspect of Melinoë) and no Arcana — similar to the start of the game. Descura keeps the Rank from the Silver Pool, so level it up first. Defeating the Guardian gets you the achievement.<h4>Full run (optional)</h4><ul><li><b>Nocturnal Arm:</b> Use a weapon you're comfortable with that doesn't depend on Omega Moves (Revaal is a good option). Level it up first.</li><li><b>Familiar:</b> Frinos for more HP, Toula for Death Defiance, or whoever you like.</li><li><b>Keepsake:</b> Crystal Figurine — activates some Arcana Cards after the win so you don't need to continue the run without them.</li></ul>` },
+  ]},
+  { id:"arms", icon:"⚔️", title:"Nocturnal Arms", items:[
+    { id:"w1", name:"The Arms of Night", short:"Unlock all 6 Nocturnal Arms",
+      guide:`<h4>How</h4>Purchase all 6 Nocturnal Arms at the Silver Pool. There is a total of 6 Nocturnal Arms in the game. You'll unlock them progressively through story progression and spending resources.` },
+    { id:"w2", name:"The Unseen Sentinel", short:"Unlock all Aspects of each Nocturnal Arm",
+      guide:`<h4>Overview</h4>Every Nocturnal Arm has 4 Aspects (3 normal + 1 hidden). Unlock them, then spend resources at the Silver Pool to obtain them.<h4>How to unlock each Aspect</h4><ul><li><b>Aspect of Melinoë:</b> Unlocked automatically when you unlock the weapon.</li><li><b>2nd and 3rd Aspects ("Aspects of Night and Darkness"):</b> Complete this incantation at the Cauldron.</li><li><b>Hidden Aspects:</b> Requires Waking Phrases from NPCs. You need at least one other non-Melinoë Aspect of that weapon maxed out.</li></ul><h4>Who gives each Hidden Aspect's Waking Phrase</h4><ul><li><b>Witch's Staff (Descura):</b> Circe</li><li><b>Sister Blades (Lim & Oros):</b> Artemis</li><li><b>Umbral Flames (Ygnium):</b> Moros</li><li><b>Moonstone Axe (Zorephet):</b> Charon</li><li><b>Argent Skull (Revaal):</b> Medea</li><li><b>Black Coat (Xinth):</b> Selene</li></ul>` },
+    { id:"w3", name:"Sword of the Night", short:"Defeat Typhon with each Nocturnal Arm at least once",
+      guide:`<h4>How</h4>Defeat the final Guardian of the Surface (Typhon) at least once with each of the 6 Nocturnal Arms. The Aspect doesn't matter — any will do.<h4>Recommended Aspects for Surface runs</h4><ul><li><b>Descura:</b> Aspect of Circe; Aspect of Momus</li><li><b>Lim & Oros:</b> Aspect of Melinoë; Aspect of the Morrigan (high damage but can be slow)</li><li><b>Ygnium:</b> Aspect of Moros; Aspect of Supay</li><li><b>Zorephet:</b> Aspect of Thanatos; Aspect of Charon (get a good Cast and increase Special speed)</li><li><b>Revaal:</b> Aspect of Medea; Aspect of Persephone (Revaal is the easiest for Surface — any Aspect works)</li><li><b>Xinth:</b> Aspect of Nyx; Aspect of Melinoë</li></ul><span class="tip">Tip</span>Try fast or ranged Aspects since Surface runs are harder.` },
+    { id:"w4", name:"Bearing Dark Gifts", short:"Complete a full run with each Aspect of each Nocturnal Arm (24 wins total)",
+      guide:`<h4>How</h4>Complete a full run (defeat the final Guardian) of either Underworld or Surface at least once with each of the 24 Aspects across all 6 weapons.<h4>Tips</h4><ul><li>Easier to do Underworld runs — they're shorter and simpler.</li><li>For Surface runs, Revaal or fast/ranged Aspects are recommended.</li><li>For Hidden Aspects, stick to Underworld runs (another Prophecy requires reaching the final Underworld confrontation with each Hidden Aspect).</li></ul><span class="warn">Recommendation</span> Attempt this after finishing the Epilogue, when you're confident fighting both final Guardians.` },
+  ]},
+  { id:"keeps", icon:"🎁", title:"Keepsakes", items:[
+    { id:"k1", name:"Sentimental Value", short:"Collect all 33 Keepsakes",
+      guide:`<h4>How Keepsakes work</h4>Gift NPCs Nectar for the first time to receive their Keepsake. If gifting through a Boon, do it before accepting the Boon — the option disappears after.<h4>All 33 Keepsakes and where to find them</h4><b>The Unseen (11):</b><ul><li>Hecate, Odysseus, Schelemeus, Dora, Moros, Nemesis — at the Crossroads</li><li>Charon — in his Shop Chambers in any Region</li><li>Circe — her special Chamber in the Rift of Thessaly</li><li>Medea — her special Chamber in the City of Ephyra</li><li>Selene — through her Boon in any Region</li><li>Icarus — can randomly appear in the Rift of Thessaly</li></ul><b>The Olympians (14):</b><ul><li>Zeus, Hera, Poseidon, Demeter, Hestia, Hephaestus, Apollo, Hermes, Aphrodite, Ares — through their Boons in any Region (Ares only after defeating Typhon)</li><li>Artemis — randomly in any Region</li><li>Athena — randomly in Mount Olympus</li><li>Dionysus — his special Chamber in Mount Olympus</li></ul><b>Others (5):</b><ul><li>Arachne — her special Chamber in Erebus</li><li>Narcissus — his special Chamber in Oceanus</li><li>Echo — her special Chamber in Fields of Mourning (talk to her first, then gift Nectar)</li><li>Heracles — randomly in the City of Ephyra</li><li>Eris — at the Crossroads</li><li>Chaos — in Chaos Gates in any Region</li></ul><b>Endgame <span class="spoiler">SPOILER</span>:</b><ul><li>Hades and Persephone — their special room in Tartarus after completing the main story</li><li>Chronos — between Erebus and Oceanus; can only be gifted after completing the main story</li><li>Zagreus — find him after the main story via a black parchment symbol over a Charon's Shop. Accept the Infernal Contract and beat Zagreus twice in Elysium. He'll give you the Keepsake (no Nectar needed).</li></ul>` },
+    { id:"k2", name:"Born to Win", short:"Complete a full run with Chaos' Keepsake without ever changing it",
+      guide:`<h4>How</h4>Use Chaos' Keepsake (the Transcendent Embryo) during a full run without changing it at any point. Recommended at max level.<h4>Unlocking the Prophecy</h4>Some players have trouble triggering Chaos' dialogue where they give you the Prophecy. Keep meeting them in Chaos Gates until they bring it up. Make sure you've visited them on the Surface at least once.` },
+  ]},
+  { id:"chaos", icon:"🌀", title:"Chaos Trials", items:[
+    { id:"c1", name:"Infinite Possibility", short:"Clear 20 Chaos Trials",
+      guide:`<h4>How to unlock Chaos Trials</h4><ol><li>Find the Pitch-Black Stone next to Schelemeus in the Training Grounds.</li><li>Enter Chaos Gates (found randomly in any Region) multiple times, speak to Chaos, and gift them at least one Nectar.</li><li>Cast the incantation "Abyssal Insight" to grant access to the Stone.</li></ol><h4>How Trials work</h4>Chaos Trials unlock as you unlock different Aspects of the Nocturnal Arms. Each Trial requires clearing a specific Region with a pre-made loadout. Just keep doing them as you unlock more Aspects.` },
+    { id:"c2", name:"Chaos in Hell", short:"Clear the 'Great Chaos Below' Trial (20 Fear, fully randomized loadout)",
+      guide:`<h4>Overview</h4>The Great Chaos Below Trial is a full Underworld run with a fully randomized loadout and 20 Fear with randomized Vows. It takes a few tries.<h4>What gets randomized</h4><ul><li><b>Nocturnal Arm and Aspect:</b> They keep the Rank from the Silver Pool — level them up beforehand.</li><li><b>Keepsake:</b> Changes as you move Regions. If a Keepsake has an ongoing effect, you keep it (e.g. Eris' Keepsake stays until the end of the run).</li><li><b>Arcana:</b> Can be affected by the Vow of Void limiting your Grasp. Getting lucky with Judgment or Circe's Keepsake helps a lot.</li><li><b>Familiar:</b> Keeps its Rank — level them up beforehand.</li><li><b>Vows:</b> The hardest part. If the Vows seem unwinnable, let yourself die and try again for a different loadout.</li></ul><h4>How to unlock this Trial</h4>You likely need to have unlocked all Aspects, all Keepsakes, all Arcana, and all Familiars. You'll probably also need to have done both Underworld and Surface runs and won with a certain amount of Fear.` },
+    { id:"c3", name:"Improbable Outcomes", short:"Win 2 Chaos Below or Chaos Above Trials in a row",
+      guide:`<h4>How</h4>Win 2 Chaos Below or Chaos Above Trials consecutively (either two of the same or one of each). These work like Great Chaos Trials (fully randomized loadout) but with 0 Fear — much more manageable.` },
+  ]},
+  { id:"rel", icon:"❤️", title:"Relationships", items:[
+    { id:"rl1", name:"Soothing Soak", short:"Take a comrade to the Hot Springs (gift Bath Salts)",
+      guide:`<h4>How to unlock Hot Springs</h4>Cast the incantation "Rite of Vapor-Cleansing" at the Cauldron.<h4>Who accepts Bath Salts</h4>Dora, Hecate, Odysseus, Moros, Nemesis, Eris, Icarus. Check the Book of Shadows — some characters require more hearts before they'll accept. Gift Bath Salts to anyone on the list who's ready.` },
+    { id:"rl2", name:"Catch of the Night", short:"Take a comrade to the Fishing Pier (gift Twin Lures)",
+      guide:`<h4>How to unlock the Fishing Pier</h4>Cast the incantation "Rite of River-Fording" at the Cauldron.<h4>Who accepts Twin Lures</h4>Dora, Hecate, Odysseus, Moros, Nemesis, Eris, Icarus. Check the Book of Shadows to see who's ready — some require more hearts first.` },
+    { id:"rl3", name:"Ambrosia for Two", short:"Take a comrade to the Taverna (gift Ambrosia)",
+      guide:`<h4>How to unlock the Taverna</h4>Cast the incantation "Rite of Social Solidarity" at the Cauldron.<h4>Who accepts Ambrosia</h4>Dora, Hecate, Odysseus, Moros, Nemesis, Eris, Icarus. Check the Book of Shadows. Note: NPCs at the Crossroads accept Ambrosia before their locked heart is opened, but you still need to unlock it to fully bond with them.` },
+    { id:"rl4", name:"Close Comrades", short:"Forge a bond with 10 comrades",
+      guide:`<h4>How to bond</h4>Keep gifting characters and progressing their story until you unlock their locked heart. Track progress in the Book of Shadows (available after casting "Empath's Intuition"). You'll need all hearts or a specific story point to forge the Bond.<h4>Exception <span class="spoiler">SPOILER</span></h4>Zagreus doesn't require gifts. Beat him a certain number of times in Elysium to forge a Bond (accessible after completing the main story via Charon's Shops with the Infernal Contract symbol).<h4>Pro tip</h4>Don't hoard gifts, especially Nectar. Give them out as soon as someone will accept them. You can buy one Nectar per day from the Wretched Broker. Remember you can't gift the same person twice in the same night.` },
+  ]},
+  { id:"char", icon:"👤", title:"Character Prophecies", items:[
+    { id:"ch1", name:"Silk and Spitefulness", short:"Fulfill Arachne's prophecy",
+      guide:`<h4>Steps</h4><ol><li>Find Arachne in her special Chamber in Erebus. Keep talking to her and gifting Nectar to unlock her story.</li><li>Talk to Hecate at the Crossroads until you begin discussing Arachne's curse.</li><li>Talk to Athena in Mount Olympus until Melinoë brings up Arachne's story and Athena agrees to meet.</li></ol><h4>Shortcut for step 3</h4>Use the Gorgon Amulet Keepsake to meet Athena in any Region (you need no Death Defiances for her to appear).<h4>Final step</h4>You'll receive the Prophecy "Silk and Spitefulness" — bring the Gorgon Amulet Keepsake to Arachne to fulfill it.` },
+    { id:"ch2", name:"Voice and Vanity", short:"Fulfill Narcissus' and Echo's prophecy",
+      guide:`<h4>Steps</h4><ol><li>Talk to Narcissus in his special Chamber in Oceanus and Echo in her special Chamber in the Fields of Mourning. Gift them Nectar whenever you can.</li><li>Narcissus' pond will become dirty. Keep talking to him — he'll eventually agree to meet Echo. You'll find them together in the Fields of Mourning.</li><li>Cast the incantation "Purification of Crystal Clarity" to clean Narcissus' pond.</li><li>Talk to them again to complete their story and fulfill the Prophecy.</li></ol>` },
+    { id:"ch3", name:"Haunted by the Past", short:"Fulfill Dora's prophecy",
+      guide:`<h4>Steps</h4><ol><li>Speak to Dora as much as possible at Melinoë's tent in the Crossroads. Keep gifting her Nectar to unlock more dialogue.</li><li>Fight Guardian Prometheus in Mount Olympus until Melinoë mentions him to Dora.</li><li>Keep talking to both of them until you can cast the incantation "Return of Latent Memories".</li><li>Talk to Dora again to complete her story and fulfill the Prophecy.</li></ol>` },
+    { id:"ch4", name:"Unfinished Business", short:"Fulfill Odysseus' prophecy (involves 4 characters)",
+      guide:`<h4>Characters involved</h4>Odysseus (Crossroads), Polyphemus (City of Ephyra), Circe (Rift of Thessaly), Scylla (Oceanus).<h4>Steps</h4><ol><li>Talk to Odysseus at the Crossroads. Gift him 1 Nectar to get his Keepsake (Knuckle Bones). Keep talking and gifting to deepen the relationship.</li><li>Face Guardian Polyphemus in the City of Ephyra. Talk to Odysseus to get the Prophecy "Nobody but Nobody" — you'll need to beat Polyphemus while wearing the Knuckle Bones.</li><li>Keep talking to Odysseus until you get the Prophecy "Unfinished Business" — talk to Polyphemus, Circe, and Scylla while wearing the Knuckle Bones. Once Odysseus gets to reunite with them all, the Prophecy is fulfilled.</li></ol>` },
+    { id:"ch5", name:"Soundest of Sleepers", short:"Fulfill Hypnos' prophecy (requires completing the main story first)",
+      guide:`<h4>Overview</h4>Wake Hypnos up from his slumber using Incantations and Dream Vapors. You can progress his story throughout the game but can only complete it after finishing the main story.<h4>Steps</h4><ol><li>Give Hypnos 2 Nectar at the Crossroads (two separate nights).</li><li>Harvest at least one Poppy. Seeds found in Tartarus. Bring Animal Familiar Hecuba to boost chances.</li><li>Cast the Incantation "End to Deepest Slumber" — gives 1 Dream Vapor. Give it to Hypnos.</li><li>Find Medea in her special Chamber in the City of Ephyra — she provides the incantation "End to Dearest Slumber" for a stronger Dream Vapor. Give it to Hypnos.</li><li>Find Medea again in the City of Ephyra — she gives the final incantation "End to Dumbest Slumber" for the last Dream Vapor. Use it to wake Hypnos and fulfill the Prophecy.</li></ol><h4>Special requirement for last incantation</h4>You'll need <b>Soot</b> — only obtainable during the Epilogue from Hades in his special Chamber in Tartarus.` },
+  ]},
+  { id:"fam", icon:"🐾", title:"Familiars", items:[
+    { id:"f1", name:"Familiar Confidant", short:"Talk to Frinos 5 times after completing a run",
+      guide:`<h4>How</h4>Whenever you complete a run, you return to shadow right next to Frinos (the Toad). Talk to him and confide in him. Do this after 5 separate completed runs.` },
+    { id:"f2", name:"Animal Whisperer", short:"Recruit all 5 Animal Familiars",
+      guide:`<h4>How to unlock</h4>Hecate gives you the incantation "Faith of Familiar Spirits" — after casting it, you can give Witch's Delight (crafted at the Cauldron) to animals in different Regions to recruit them.<h4>Where to find each Familiar</h4><ul><li><b>Frinos (Toad):</b> Next to Melinoë's tent at the Crossroads</li><li><b>Raki (Raven):</b> Fountain rooms in Erebus</li><li><b>Toula (Cat):</b> Docks before entering the Rift of Thessaly</li><li><b>Hecuba (Hound):</b> Echo's special room in the Fields of Mourning</li><li><b>Gale (Polecat):</b> Charon's Shop in Mount Olympus right before the Guardian room</li></ul>` },
+    { id:"f3", name:"Beast Master", short:"Fully upgrade all 5 Animal Familiars",
+      guide:`<h4>How</h4>Upgrade your Familiars at the Silver Pool by gifting them Witch's Delight. Each Familiar has 3 abilities upgradeable to Rank III — that's 9 Witch's Delight per Familiar, 45 total for all five.<h4>Where to get Witch's Delight</h4><ul><li>From Familiar-related Incantations</li><li>Craft at the Cauldron</li><li>Find as a reward in Tartarus or the Summit while playing with at least 12 Fear after casting the incantation "Bounties of the Infinite Abyss"</li></ul>` },
+    { id:"f4", name:"Unfamiliar Forms", short:"Alter the appearance of each Animal Familiar at least once",
+      guide:`<h4>How to unlock</h4>Level up your Familiars and deepen your bond with Circe until she gives you the incantation "Alteration of Familiar Forms". Cast it at the Cauldron.<h4>How to change appearance</h4>Spend Kudos and other resources at the Silver Pool to change each Familiar's look. You must change all 5 Familiars at least once.` },
+  ]},
+  { id:"oath", icon:"🛡️", title:"Oath of the Unseen", items:[
+    { id:"o1", name:"Unrivaled Prowess", short:"Defeat each Guardian with their Vow of Rivals active",
+      guide:`<h4>How to unlock</h4>Defeat Chronos (final Guardian of Tartarus) once to unlock the Oath of the Unseen in the Training Grounds.<h4>How to earn</h4>Defeat the Guardian of each Region with their specific Vow of Rivals active. The Vow increases fight difficulty and adds new mechanics (equivalent of Extreme Measures in the original Hades).<h4>Progression</h4>Defeating Erebus and City of Ephyra Guardians with Vow of Rivals unlocks an Incantation to unlock Vow of Rivals for 2nd Region Guardians, and so on. You need to actually defeat the first 3 Guardians of both Underworld and Surface with Vow of Rivals, but for the final Guardians (Chronos and Typhon) you only need to enter the fight — defeating them is not required.` },
+    { id:"o2", name:"Behold Night's Champion", short:"Earn the first Gift of the Veil",
+      guide:`<h4>Requirements</h4>Succeed on an Underworld run with <b>8 Fear</b> AND a Surface run with <b>6 Fear</b>.<h4>Recommended Vows (favorites)</h4><ul><li><b>Vow of Wards:</b> Free Fear — AOE damage clears Barriers quickly.</li><li><b>Vow of Fangs (1 Rank):</b> Manageable at one rank.</li><li><b>Vow of Debt:</b> Free Fear once you get used to hoarding Gold and spending only at the end of each Region.</li><li><b>Vow of Forfeit (1 Rank):</b> Fine — you can still get a good loadout.</li><li><b>Vow of Void:</b> Trickier, but works well with the Judgment/Crystal Figurine build (up to 3 Ranks, recommended 2).</li><li><b>Vow of Hubris:</b> Good with Arms that don't use many Omega Moves (e.g. Revaal).</li><li><b>Vow of Rivals:</b> Up to you — adds a lot of Fear but makes Guardian fights harder.</li></ul>` },
+    { id:"o3", name:"Mercy, Night's Executioner", short:"Earn the second Gift of the Veil",
+      guide:`<h4>Requirements</h4>Succeed on an Underworld run with <b>16 Fear</b> AND a Surface run with <b>12 Fear</b>.<h4>Tips</h4>Use the same Vow strategies as for the first Gift of the Veil, but stack more of them. The Judgment/Crystal Figurine Arcana build helps significantly at high Fear. Revaal is a strong choice for Surface runs at high Fear.` },
+  ]},
+  { id:"misc", icon:"✨", title:"Miscellaneous", items:[
+    { id:"m1", name:"Sheep's Clothing", short:"Slay a Sister of the Dead while afflicted with Twilight Curse",
+      guide:`<h4>When and where</h4>During the Guardian fight with Hecate in Erebus. She summons Sisters of the Dead and casts Twilight Curse — an orb that morphs you into an animal on contact. While morphed, you can only run and bite for minimal damage.<h4>3 easy methods</h4><ul><li><b>Lone Shades:</b> If you've cast the incantation "Necromanctic Influence", sprint through the Lone Shades at the map edges while morphed — let them attack the Sisters.</li><li><b>Familiar Toula:</b> Sprint through Toula while morphed — she'll attack automatically. Safest option.</li><li><b>Terrain Kill:</b> Dash through one of the trees in the arena while morphed when a Sister is nearby — this gets a Terrain Kill and the achievement.</li></ul>` },
+    { id:"m2", name:"Breaking Up the Band", short:"Use Night Bloom to raise a Siren during the Scylla fight",
+      guide:`<h4>How</h4>During the Guardian fight with Scylla and the Sirens in Oceanus, use the Hex "Night Bloom" (from Selene) — it raises your most recently slain foe to fight for you. After defeating Roxy (Drums) or Jetty (Guitar), activate your Hex and they'll rejoin the fight on your side. This unlocks some hilarious dialogue too.<h4>Requirement</h4>Acquire the Night Bloom Hex from Selene beforehand (found as a Boon in any Region).` },
+    { id:"m3", name:"Fair Fight", short:"Earn 1,000 Gold by defeating Nemesis in her challenges",
+      guide:`<h4>How</h4>Nemesis occasionally appears during Encounters and challenges you to kill more Foes than her in exchange for Gold. Go fast, go crazy, and beat her as many times as it takes. It takes quite a few wins to accumulate 1,000 Gold this way — just keep playing and she'll keep showing up.` },
+    { id:"m4", name:"Dressed to Kill", short:"Reach the Chronos fight while still wearing an Arachne outfit",
+      guide:`<h4>How</h4>Reach the Guardian fight with Chronos in Tartarus while still wearing one of Arachne's Dresses. You just need to enter the fight with the dress intact — you don't need to win.<h4>How dresses work</h4>Arachne's Dresses grant Armor (temporary hit points). You must never take enough damage to break your Armor.<h4>Best dresses to use</h4><ul><li>Onyx Dress (+60 Armor)</li><li>Moonlight Dress (+55 Armor)</li><li>Emerald Dress (+50 Armor)</li></ul><h4>Tips</h4><ul><li>Use Arachne's Keepsake (Silken Sash) — maxed out, it grants more Armor as you exit Encounters with some left.</li><li>Use a fast or ranged Nocturnal Arm. Revaal is a great pick.</li><li>Buy Armor from Charon's Shops; sometimes found in Fields of Mourning.</li><li><b>Key: Hephaestus Boons!</b> Hunt for Hephaestus and grab these:<br>— <b>Heavy Metal:</b> Grants Armor + damage bonus based on Armor.<br>— <b>Trusty Shield:</b> Armor when entering a Location (costs 30 Magick to prime).<br>— <b>Security System:</b> Temporary Armor for 7 seconds at Encounter start. At high Rarities, you get a LOT — go crazy in those 7 seconds.</li></ul>` },
+    { id:"m5", name:"Elysian Glory", short:"Defeat Zagreus in Elysium",
+      guide:`<h4>How to access</h4>Only available after completing the main story. During runs, watch for Charon's Shop Chambers with a small icon at the top — that's the Infernal Contract. Accepting it sends you to Elysium to fight Zagreus. If you win, every Charon's Shop ahead has a free item. If you lose, you return to the Crossroads and the run ends.<h4>Tips for the fight</h4><ul><li>Zagreus hits extremely hard. Keep moving — use pillars for cover.</li><li>Ranged weapons are your best bet. Hit him in small openings, then retreat.</li><li>Use Familiar Toula to attack for you.</li><li>Use powerful Casts or DOT effects.</li><li>He has two phases, so the fight takes a while.</li></ul>` },
+  ]},
+];
+
+const TOTAL = DATA.reduce((s,sec) => s + sec.items.length, 0);
+let state = JSON.parse(localStorage.getItem('hades2_ach') || '{}');
+let filter = 'all';
+let collapsed = {};
+let guidesOpen = {};
+
+function save() { localStorage.setItem('hades2_ach', JSON.stringify(state)); }
+function count() { return Object.values(state).filter(Boolean).length; }
+
+function updateProgress() {
+  const n = count();
+  document.getElementById('bar').style.width = (n/TOTAL*100)+'%';
+  document.getElementById('plabel').textContent = n+' / '+TOTAL;
+  document.getElementById('ppct').textContent = Math.round(n/TOTAL*100)+'%';
+  DATA.forEach(sec => {
+    const done = sec.items.filter(it => state[it.id]).length;
+    const el = document.getElementById('cnt-'+sec.id);
+    if (el) {
+      el.textContent = done+' / '+sec.items.length;
+      el.className = 'sec-badge' + (done === sec.items.length ? ' complete' : '');
+    }
+  });
+}
+
+function toggle(id) {
+  state[id] = !state[id];
+  const el = document.getElementById('ach-'+id);
+  if (!el) return;
+  if (state[id]) el.classList.add('done'); else el.classList.remove('done');
+  if (filter !== 'all') renderSections();
+  save();
+  updateProgress();
+}
+
+function toggleGuide(id, e) {
+  e.stopPropagation();
+  guidesOpen[id] = !guidesOpen[id];
+  const el = document.getElementById('guide-'+id);
+  const btn = document.getElementById('gbtn-'+id);
+  if (el) { el.classList.toggle('visible', !!guidesOpen[id]); }
+  if (btn) btn.textContent = guidesOpen[id] ? 'Hide' : 'Details';
+}
+
+function toggleSection(id) {
+  collapsed[id] = !collapsed[id];
+  const list = document.getElementById('list-'+id);
+  const chev = document.getElementById('chev-'+id);
+  if (list) list.style.display = collapsed[id] ? 'none' : 'flex';
+  if (chev) { if (collapsed[id]) chev.classList.remove('open'); else chev.classList.add('open'); }
+}
+
+function setFilter(f) {
+  filter = f;
+  document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+  renderSections();
+}
+
+function expandAll() { DATA.forEach(s => { collapsed[s.id] = false; toggleSection(s.id); collapsed[s.id] = false; }); renderSections(); }
+function collapseAll() { DATA.forEach(s => { collapsed[s.id] = false; toggleSection(s.id); collapsed[s.id] = true; }); renderSections(); }
+function expandGuides() { DATA.forEach(s => s.items.forEach(it => { guidesOpen[it.id] = true; const el = document.getElementById('guide-'+it.id); if (el) el.classList.add('visible'); const btn = document.getElementById('gbtn-'+it.id); if (btn) btn.textContent='Hide'; })); }
+function collapseGuides() { DATA.forEach(s => s.items.forEach(it => { guidesOpen[it.id] = false; const el = document.getElementById('guide-'+it.id); if (el) el.classList.remove('visible'); const btn = document.getElementById('gbtn-'+it.id); if (btn) btn.textContent='Details'; })); }
+function resetAll() { if (!confirm('Reset all achievements?')) return; state={}; save(); renderSections(); updateProgress(); }
+
+function renderSections() {
+  const container = document.getElementById('sections');
+  container.innerHTML = '';
+  DATA.forEach(sec => {
+    let items = sec.items;
+    if (filter === 'done') items = items.filter(it => state[it.id]);
+    if (filter === 'todo') items = items.filter(it => !state[it.id]);
+    if (items.length === 0) return;
+    const done = sec.items.filter(it => state[it.id]).length;
+    const isCollapsed = collapsed[sec.id];
+    const secEl = document.createElement('div');
+    secEl.className = 'section';
+    secEl.innerHTML = `
+      <div class="sec-head" onclick="toggleSection('${sec.id}')">
+        <span class="sec-icon">${sec.icon}</span>
+        <span class="sec-title">${sec.title}</span>
+        <span class="sec-badge${done===sec.items.length?' complete':''}" id="cnt-${sec.id}">${done} / ${sec.items.length}</span>
+        <span class="sec-chev${isCollapsed?'':' open'}" id="chev-${sec.id}">▾</span>
+      </div>
+      <div class="ach-list" id="list-${sec.id}" style="display:${isCollapsed?'none':'flex'}">
+        ${items.map(it => `
+          <div class="ach${state[it.id]?' done':''}" id="ach-${it.id}">
+            <div class="ach-main" onclick="toggle('${it.id}')">
+              <div class="checkbox">
+                <svg class="check-svg" viewBox="0 0 12 10"><polyline points="1,5 4,9 11,1"/></svg>
+              </div>
+              <div class="ach-info">
+                <div class="ach-name">${it.name}</div>
+                <div class="ach-short">${it.short}</div>
+              </div>
+              <button class="expand-btn" id="gbtn-${it.id}" onclick="toggleGuide('${it.id}', event)">${guidesOpen[it.id]?'Hide':'Details'}</button>
+            </div>
+            <div class="ach-guide${guidesOpen[it.id]?' visible':''}" id="guide-${it.id}">${it.guide}</div>
+          </div>
+        `).join('')}
+      </div>`;
+    container.appendChild(secEl);
+  });
+  updateProgress();
+}
+
+renderSections();
+</script>
+</body>
+</html>
