@@ -2,7 +2,7 @@ An interactive HTML achievement tracker for Hades II, covering all 49 manually o
 
 ## How to use
 
-1. [Download the tracker](https://raw.githubusercontent.com/zekka26/hades2-achievement-tracker/main/hades2_tracker.html)
+1. Download the tracker - go to hades2_tracker.html, check the code if needed and dowload the file click dowloand raw button
 2. Open the file in any browser — no installation required
 3. Click an achievement to mark it as completed
 4. Click **Details** to expand the full guide for that achievement
